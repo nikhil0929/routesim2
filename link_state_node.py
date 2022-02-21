@@ -2,7 +2,7 @@ from simulator.node import Node
 
 
 class Link_State_Node(Node):
-    def __init__(self, id):
+    def __init__(self, id, src, dst, cost):
         super().__init__(id)
 
     # Return a string
