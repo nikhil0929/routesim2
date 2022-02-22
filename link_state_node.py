@@ -2,15 +2,20 @@ from simulator.node import Node
 import json
 
 class Link_State_Node(Node):
-    def __init__(self, id, src, dst, cost):
+    def __init__(self, id):
         super().__init__(id)
         #we are gonna need to init some things:
         # - since we are building a single node, lets set its sequence number
         self.seq_num = 0
 
+
         self.edges = dict() #can use frozensets to represent key, and the weights as values
-        self.nodes = {self.id: 0}
+        self.nodes = set()
         self.graph = {} #want to use graph representation
+
+    # if we are using a graph representation, we need helper functions
+    # 1. to add the edges to graph
+    # 2. to remove edges from graph
 
     # Return a string
     def __str__(self):
@@ -24,7 +29,14 @@ class Link_State_Node(Node):
         # called when outgoing connected link has changed properties
         # response: want to update forwarding tables and send message out to neighbors
         # 1. form our message to sent to all neighbors
+        # message contents: link source, link destination, seq num, link cost
         message = {}
+        message["link_src"] = self.id
+        message["link_dst"] = neighbor
+        message["seq_num"] = self.seq_num
+        message["link_cost"] = latency
+        #increment seq num
+
         pass
 
     # Fill in this function
@@ -54,8 +66,9 @@ class Link_State_Node(Node):
             return path[1]
 
 
-    #function to implement Djikstras Algorithm
+    # functions to implement Djikstras Algorithm (GRAPH REPRESENTATION)
     # adapted from https://www.geeksforgeeks.org/printing-paths-dijkstras-shortest-path-algorithm/
+    # START OF REFERENCE
     def minDist(self, distance_vector, queue):
         #will find node with shortest path value and return index
         min_val = float("Inf")
@@ -117,3 +130,5 @@ class Link_State_Node(Node):
             self.find_path(parent, parent[dst], path)
 
         return path
+    #END OF REFERENCE
+    #source: https://www.geeksforgeeks.org/printing-paths-dijkstras-shortest-path-algorithm/
