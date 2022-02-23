@@ -6,13 +6,13 @@ class Link_State_Node(Node):
         super().__init__(id)
         #we are gonna need to init some things:
         # - since we are building a single node, lets set its sequence number
-        self.seq_num = 0
+        #self.seq_num = 0
         #self.messages = {}
 
         self.edges = dict() #can use frozensets to represent key, and the weights as values
 
 
-        self.nodes = {self.id : 0}
+        self.nodes = {self.id: 0}
         #self.graph = {} #want to use graph representation
 
     # if we are using a graph representation, we need helper functions
@@ -39,36 +39,50 @@ class Link_State_Node(Node):
         #increment seq num
         #self.seq_num += 1
         #update our set of edges
-        print("update link")
+
 
         node_pair = frozenset([self.id, neighbor])
+        #self.nodes[neighbor] = neighbor
         #print(node_pair)
+        print("update link: " + str(node_pair) + " with latency " + str(latency))
 
         if node_pair in self.edges:
-            self.seq_num += 1
+            sequence_num = self.edges[node_pair]['sequence num'] + 1
         else:
-            self.seq_num = 0
+            sequence_num = 0
 
-        self.build_link(node_pair, latency)
+        #print("ABOUT TO BUILD LINK")
+        #print(node_pair)
+        #print("EDGES DICT:")
+        #print(self.edges)
+
+        #if node_pair not in self.edges:
+        self.build_link(node_pair, latency, sequence_num)
          # edges[1][2] = 3 means that the link btwn Node 1 and 2 has a latency of 3
 
 
 
     #this function simply forms our json message to be sent
     def form_message(self, edge):
-        return json.dumps((list(edge), self.edges[edge], self.seq_num))
+        return json.dumps((list(edge), self.edges[edge]['latency'], self.edges[edge]['sequence num']))
 
     # this function will build the edge link between two nodes, and send update messages
-    def build_link(self, edge, latency):
-        print("build link")
+    def build_link(self, node_pair, latency, sequence_num):
+        #print("build link")
         #set the latency of the link
-        self.edges[edge] = latency
+        #print('==========')
+        #print(node_pair)
+        #print(latency)
+        #print('==========')
 
-        for node in edge:
+        #if node_pair not in self.edges:
+        self.create_edge(node_pair, latency, sequence_num)
+
+        for node in node_pair:
             # checking both parent nodes of this edge
             if node not in self.nodes:
                 # this means one of the nodes is new
-                for n_pair in self.edges:
+                for n_pair in self.edges.keys():
                     # must send update to that node with edge broadcast
                     self.send_to_neighbor(node, self.form_message(n_pair))
             # check if node is self
@@ -79,7 +93,12 @@ class Link_State_Node(Node):
                 self.nodes[node] = 0
 
         # send our message in json format
-        self.send_to_neighbors(self.form_message(edge))
+        self.send_to_neighbors(self.form_message(node_pair))
+
+    #function to create a new edge with given latency and sequence num
+    def create_edge(self, node_pair, latency, seq_num):
+        #print("creating edge between " + str(node_pair) + "with latency " + str(latency))
+        self.edges[node_pair] = {"latency" : latency, "sequence num" : seq_num}
 
     # Fill in this function
     def process_incoming_routing_message(self, m):
@@ -91,13 +110,14 @@ class Link_State_Node(Node):
         # First check if this message (packet) is in our message list
         # if our message is already there (dup) -> drop message
         # else -> duplicate message, and forward to all neighbors (update routing tables)
-        print("imcoming message")
+        #print("imcoming message")
+        #print("INCOMING MESSAGE")
         edge, latency, seq_num = json.loads(m)
         edge = frozenset(edge)
-        #print(edge)
+        #print(latency)
 
-        if edge not in self.edges or (self.seq_num < seq_num):
-            self.build_link(edge, latency)
+        if edge not in self.edges or (self.edges[edge]['sequence num'] < seq_num):
+            self.build_link(edge, latency, seq_num)
 
     # Return a neighbor, -1 if no path to destination
     def get_next_hop(self, destination):
@@ -116,12 +136,12 @@ class Link_State_Node(Node):
         # PARENT vector for 4 should not be 8
         # its taking the frist one of our parent vector, but we should really check the latencies of the connections.
         dist_vect, parent_vect = self.dijkstra_routing()
-        print("===============")
-        print("Distance Vector, Parent Vector")
-        print(dist_vect)
-        print(parent_vect)
-        print(destination)
-        print("===============")
+        #print("===============")
+        #print("Distance Vector, Parent Vector")
+        #print(dist_vect)
+        #print(parent_vect)
+        #print(destination)
+        #print("===============")
 
 
         path = self.find_path(parent_vect, destination, [])
@@ -154,9 +174,9 @@ class Link_State_Node(Node):
         # take in our network and the starting node?
         # return shortest paths between src and all nodes
         print("========================")
-        print("dijkstras running")
+        #print("dijkstras running")
         print(self.edges)
-        print(self.nodes)
+        #print(self.nodes)
         print("========================")
 
         parent = {}
@@ -169,16 +189,28 @@ class Link_State_Node(Node):
 
         distance_vector[self.id] = 0
         #print(parent)
-        #create queue to add all vertices too, order matters
+        #create queue to add all vertices too
         queue = []
         for node_id in self.nodes:
             queue.append(node_id)
 
-        #print(queue)
+        #print(parent)
+        #print(distance_vector)
+        print(queue)
+
+        #print(self.edges)
 
         while queue:
             #find vertex with min distance in our queue
-            min_index = self.minDist(distance_vector, queue)
+            min_index = None
+            for node in queue:
+                if min_index is None:
+                    min_index = node
+                elif distance_vector[node] < distance_vector[min_index]:
+                    min_index = node
+
+            #min_index = self.minDist(distance_vector, queue)
+            print(min_index)
             queue.remove(min_index)
 
             #must update our distances and parent values
@@ -187,18 +219,28 @@ class Link_State_Node(Node):
                 #print(min_index)
                 #print(next_index)
                 #checks to make sure its not looping itself
-                if min_index != next_index:
-                    ind = frozenset([min_index, next_index])
+                ind = frozenset([min_index, next_index])
+                if ind in self.edges:
+                    alt_latency = self.edges[ind]['latency']
+                    alt = distance_vector[min_index] + alt_latency
+
+                    if alt < distance_vector[next_index]:
+                        distance_vector[next_index] = alt
+                        parent[next_index] = min_index
+
+                #if min_index != next_index:
+                    #ind = frozenset([min_index, next_index])
                     #print(ind)
                     #print(self.edges[ind])
-                    if ind in self.edges and next_index in queue:
-                        new_dist = distance_vector[min_index] + self.edges[ind]
-                        if new_dist < distance_vector[next_index]:
+                    #if ind in self.edges and next_index in queue:
+                        #new_dist = distance_vector[min_index] + self.edges[ind]['latency']
+                        #if new_dist < distance_vector[next_index]:
                             #this means that we have found a shorter path, so we update our neighbor
-                            distance_vector[next_index] = new_dist
-                            parent[next_index] = min_index
+                            #distance_vector[next_index] = new_dist
+                            #parent[next_index] = min_index
 
         #return our distance vector and parent vector
+        print(distance_vector)
         return distance_vector, parent
 
 
