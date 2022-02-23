@@ -49,7 +49,10 @@ class Link_State_Node(Node):
     # this function will build the edge link between two nodes, and send update messages
     def build_link(self, node_pair, latency, sequence_num):
 
-        #create an edge between our two nodes
+        #set out edge weight to Infitiy if this link was deleted
+        if latency == -1:
+            latency = float('Inf')
+
         self.create_edge(node_pair, latency, sequence_num)
 
         for node in node_pair:
@@ -113,9 +116,11 @@ class Link_State_Node(Node):
         #print("===============")
 
 
-        path = self.find_path(parent_vect, destination, [])
+        path = self.find_path(parent_vect, destination)
+        #print(path)
+        #print("===============")
+
         print(path)
-        print("===============")
         if len(path) < 2:
             return -1
         else:
@@ -178,15 +183,44 @@ class Link_State_Node(Node):
 
 
     #function to find shortest path from our dictionaries
-    def find_path(self, parent, dst, path):
+    def find_path(self, parent, dst):
         #returns shortest path from source to destination
+        #print("parent " + str(parent))
+        #print(dst)
+        #for node in parent:
+        #    print(parent[node])
+        #    if parent[dst] == -1:
+        #        path.insert(0,dst)
+        #    dst = parent[dst]
 
-        if parent[dst] == -1:
-            path.insert(0,dst)
-        else:
-            path.insert(0,dst)
-            self.find_path(parent, parent[dst], path)
+        #return path
 
+        path = []
+        node = dst
+
+        print(parent)
+        print("from node " + str(self.id) + " to node " + str(dst))
+        #print(self.id)
+        #print(node)
+        print(parent[self.id])
+
+        while parent[node] != parent[self.id]:
+            #print("path being built")
+            print(parent[node])
+            path.append(node)
+            node = parent[node]
+
+        path.append(self.id)
+        path.reverse()
         return path
+        #if parent[dst] == -1:
+        #    path.insert(0,dst)
+            #return path
+
+        #else:
+         #   path.insert(0,dst)
+        #    self.find_path(parent, parent[dst], path)
+
+        #return path
     #END OF REFERENCE
     #source: Lecture 12 Slide 29
