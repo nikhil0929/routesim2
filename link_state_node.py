@@ -29,14 +29,16 @@ class Link_State_Node(Node):
 
         #message = {"link_src": self.id, "link_dst": neighbor, "seq_num": self.seq_num, "link_cost": latency}
 
-        #update our set of edges
+        #form a frozenset for our edge
         node_pair = frozenset([self.id, neighbor])
+
+        #update sequence numbers
         if node_pair in self.edges:
             sequence_num = self.edges[node_pair]['sequence num'] + 1
         else:
             sequence_num = 0
 
-        #if node_pair not in self.edges:
+        #actually create the link between our two nodes
         self.build_link(node_pair, latency, sequence_num)
          # edges[1][2] = 3 means that the link btwn Node 1 and 2 has a latency of 3
 
@@ -47,7 +49,7 @@ class Link_State_Node(Node):
     # this function will build the edge link between two nodes, and send update messages
     def build_link(self, node_pair, latency, sequence_num):
 
-        #if node_pair not in self.edges:
+        #create an edge between our two nodes
         self.create_edge(node_pair, latency, sequence_num)
 
         for node in node_pair:
@@ -57,12 +59,8 @@ class Link_State_Node(Node):
                 for n_pair in self.edges.keys():
                     # must send update to that node with edge broadcast
                     self.send_to_neighbor(node, self.form_message(n_pair))
-            # check if node is self
-            if node != self.id:
-                #if not set distance to infinity
-                self.nodes[node] = float('inf')
-            else:
-                self.nodes[node] = 0
+            # sets node list to true
+            self.nodes[node] = 1
 
         # send our message in json format
         self.send_to_neighbors(self.form_message(node_pair))
@@ -86,7 +84,7 @@ class Link_State_Node(Node):
         edge, latency, seq_num = json.loads(m)
         edge = frozenset(edge)
 
-
+        #if we havent already received this link or its a lower sequence number, we have to update our links
         if edge not in self.edges or (self.edges[edge]['sequence num'] < seq_num):
             self.build_link(edge, latency, seq_num)
 
